@@ -19,8 +19,8 @@ services:
     environment:
       TZ: ${TZ:-America/New_York}
     volumes:
-      - ./rootfs/data/healthchecks:/data
-      - ./rootfs/config/healthchecks:/config
+      - ./volumes/data/healthchecks:/data
+      - ./volumes/config/healthchecks:/config
     depends_on:
       - healthchecks-db
     healthcheck:
@@ -42,7 +42,7 @@ services:
       POSTGRES_USER: ${DB_USER_NAME:-healthchecks}
       POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
     volumes:
-      - ./rootfs/data/db/postgres/healthchecks:/var/lib/postgresql/data
+      - ./volumes/data/db/postgres/healthchecks:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${{POSTGRES_USER}} -d $${{POSTGRES_DB}}"]
       interval: 30s
