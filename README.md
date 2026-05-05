@@ -50,9 +50,9 @@ See `docker-compose.yaml` for complete list of configurable options.
 
 ## 📂 Volumes
 
-- `./rootfs/data/healthchecks` - Data storage
-- `./rootfs/config/healthchecks` - Data storage
-- `./rootfs/data/db/postgres/healthchecks` - Data storage
+- `./volumes/data/healthchecks` - Data storage
+- `./volumes/config/healthchecks` - Data storage
+- `./volumes/data/db/postgres/healthchecks` - Data storage
 
 ## 🔐 Security
 
