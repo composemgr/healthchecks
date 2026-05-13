@@ -1,5 +1,6 @@
 # nginx proxy address - http://172.17.0.1:8098
 
+name: healthchecks
 x-logging: &default-logging
   driver: json-file
   options:
@@ -7,32 +8,44 @@ x-logging: &default-logging
     max-file: "1"
 
 services:
-  healthchecks:
+  app:
     image: healthchecks/healthchecks:latest
+    pull_policy: always
     container_name: healthchecks-app
-    restart: unless-stopped
+    restart: always
     logging: *default-logging
     networks:
       - healthchecks
     ports:
-      - "8098:8098"
+      - "172.17.0.1:8098:8000"
     environment:
       TZ: ${TZ:-America/New_York}
-    volumes:
-      - ./volumes/data/healthchecks:/data
-      - ./volumes/config/healthchecks:/config
+      SECRET_KEY: ${APP_SECRET_KEY:-changeme_secret_key_min_32_chars}
+      SITE_ROOT: http://${BASE_HOST_NAME:-$HOSTNAME}
+      SITE_NAME: ${APP_NAME:-Healthchecks}
+      DEFAULT_FROM_EMAIL: ${EMAIL_SERVER_MAIL_FROM:-noreply@example.com}
+      EMAIL_HOST: ${EMAIL_SERVER_HOST:-172.17.0.1}
+      EMAIL_PORT: ${EMAIL_SERVER_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_SERVER_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_SERVER_PASS:-}
+      EMAIL_USE_TLS: "True"
+      SUPERUSER_EMAIL: ${APP_ADMIN_USER:-admin@example.com}
+      SUPERUSER_PASSWORD: ${APP_ADMIN_PASS:-changeme_admin_password}
+      DB: postgres
+      DB_HOST: healthchecks-db
+      DB_PORT: 5432
+      DB_NAME: ${DB_CREATE_DATABASE_NAME:-healthchecks}
+      DB_USER: ${DB_USER_NAME:-healthchecks}
+      DB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
     depends_on:
-      - healthchecks-db
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8098"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      healthchecks-db:
+        condition: service_healthy
 
   healthchecks-db:
-    image: postgres:16-alpine
+    image: postgres:latest
+    pull_policy: always
     container_name: healthchecks-db
-    restart: unless-stopped
+    restart: always
     logging: *default-logging
     networks:
       - healthchecks
@@ -44,11 +57,12 @@ services:
     volumes:
       - ./volumes/data/db/postgres/healthchecks:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${{POSTGRES_USER}} -d $${{POSTGRES_DB}}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NAME:-healthchecks} -d ${DB_CREATE_DATABASE_NAME:-healthchecks}"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 networks:
   healthchecks:
+    name: healthchecks
     external: false
