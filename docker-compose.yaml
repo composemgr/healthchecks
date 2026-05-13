@@ -31,8 +31,6 @@ services:
       EMAIL_HOST_USER: ${EMAIL_SERVER_LOGIN_NAME:-}
       EMAIL_HOST_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
       EMAIL_USE_TLS: "True"
-      SUPERUSER_EMAIL: ${APP_ADMIN_USER:-admin@example.com}
-      SUPERUSER_PASSWORD: ${APP_ADMIN_PASS:-changeme_admin_password}
       DB: postgres
       DB_HOST: healthchecks-db
       DB_PORT: 5432
