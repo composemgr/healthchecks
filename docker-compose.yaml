@@ -1,91 +1,77 @@
-# nginx proxy address - http://172.17.0.1:8098
+# nginx proxy address - http://172.17.0.1:64197
 
 name: healthchecks
 x-logging: &default-logging
-  driver: json-file
   options:
-    max-size: "5m"
-    max-file: "1"
+    max-size: '5m'
+    max-file: '1'
+  driver: json-file
 
 services:
   app:
     image: healthchecks/healthchecks:latest
-    pull_policy: always
     container_name: healthchecks-app
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: ${BASE_HOST_NAME:-$HOSTNAME}
     restart: always
+    pull_policy: always
     logging: *default-logging
-    networks:
-      - healthchecks
-      - proxy
-      - cloudflare
-    ports:
-      - "172.17.0.1:8098:8000"
     environment:
       TZ: ${TZ:-America/New_York}
-      SECRET_KEY: ${APP_SECRET_KEY:-changeme_secret_key_min_32_chars}
-      SITE_ROOT: http://${BASE_HOST_NAME:-$HOSTNAME}
+      CONTAINER_NAME: healthchecks-app
+      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+      # Application Settings
+      SITE_ROOT: https://${BASE_HOST_NAME:-$HOSTNAME}
       SITE_NAME: ${APP_ORG_NAME:-Healthchecks}
-      DEFAULT_FROM_EMAIL: ${EMAIL_SERVER_MAIL_FROM:-noreply@example.com}
-      EMAIL_HOST: ${EMAIL_SERVER_HOST:-172.17.0.1}
-      EMAIL_PORT: ${EMAIL_SERVER_PORT:-587}
-      EMAIL_HOST_USER: ${EMAIL_SERVER_LOGIN_NAME:-}
-      EMAIL_HOST_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
-      EMAIL_USE_TLS: "True"
+      SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-random-32-byte-hex-string}
+      ALLOWED_HOSTS: ${BASE_HOST_NAME:-$HOSTNAME}
+      # Database Settings
       DB: postgres
       DB_HOST: healthchecks-db
       DB_PORT: 5432
       DB_NAME: ${DB_CREATE_DATABASE_NAME:-healthchecks}
       DB_USER: ${DB_USER_NAME:-healthchecks}
-      DB_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
-      CONTAINER_NAME: healthchecks-app
-      HOSTNAME: ${BASE_HOST_NAME:-$HOSTNAME}
+      DB_PASSWORD: ${DB_USER_PASS:-replace-with-a-random-password}
+      # Email Settings
+      DEFAULT_FROM_EMAIL: ${EMAIL_SERVER_MAIL_FROM:-no-reply@${BASE_HOST_NAME:-$HOSTNAME}}
+      EMAIL_HOST: ${EMAIL_SERVER_HOST:-172.17.0.1}
+      EMAIL_PORT: ${EMAIL_SERVER_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_SERVER_LOGIN_NAME:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
+      EMAIL_USE_TLS: 'True'
+    ports:
+      - '172.17.0.1:64197:8000'
     depends_on:
       healthchecks-db:
         condition: service_healthy
-    labels:
-      - 'traefik.enable=true'
-      - 'cloudflare.enable=true'
-      - 'traefik.docker.network=proxy'
-      - 'cloudflare.service=http://healthchecks-app:8000'
-      - 'cloudflare.hostname=healthchecks.${CLOUDFLARE_ZONE_NAME:-}'
-      - 'traefik.http.routers.healthchecks-app.entrypoints=http'
-      - 'traefik.http.routers.healthchecks-app-secure.tls=true'
-      - 'traefik.http.routers.healthchecks-app.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.middlewares.healthchecks-app-https-redirect.redirectscheme.scheme=https'
-      - 'traefik.http.routers.healthchecks-app.middlewares=healthchecks-app-https-redirect'
-      - 'traefik.http.routers.healthchecks-app-secure.entrypoints=https'
-      - 'traefik.http.routers.healthchecks-app-secure.rule=Host($(${BASE_HOST_NAME:-$HOSTNAME}))'
-      - 'traefik.http.routers.healthchecks-app-secure.tls.certresolver=cloudflare'
-      - 'traefik.http.routers.healthchecks-app-secure.service=healthchecks-app'
-      - 'traefik.http.services.healthchecks-app.loadbalancer.server.port=8000'
+    networks:
+      - healthchecks
 
   healthchecks-db:
     image: postgres:latest
-    pull_policy: always
     container_name: healthchecks-db
+    domainname: ${BASE_DOMAIN_NAME:-example.com}
+    hostname: healthchecks-db
     restart: always
+    pull_policy: always
     logging: *default-logging
-    networks:
-      - healthchecks
     environment:
       TZ: ${TZ:-America/New_York}
+      CONTAINER_NAME: healthchecks-db
       POSTGRES_DB: ${DB_CREATE_DATABASE_NAME:-healthchecks}
       POSTGRES_USER: ${DB_USER_NAME:-healthchecks}
-      POSTGRES_PASSWORD: ${DB_USER_PASS:-changeme_db_password}
-      CONTAINER_NAME: healthchecks-db
+      POSTGRES_PASSWORD: ${DB_USER_PASS:-replace-with-a-random-password}
     volumes:
-      - ./volumes/data/db/postgres/healthchecks:/var/lib/postgresql/data
+      - './volumes/db/postgres/healthchecks:/var/lib/postgresql:z'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_NAME:-healthchecks} -d ${DB_CREATE_DATABASE_NAME:-healthchecks}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER_NAME:-healthchecks} -d ${DB_CREATE_DATABASE_NAME:-healthchecks}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healthchecks
 
 networks:
   healthchecks:
     name: healthchecks
     external: false
-  proxy:
-    external: true
-  cloudflare:
-    external: true
