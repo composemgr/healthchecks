@@ -39,6 +39,12 @@ services:
       EMAIL_HOST_USER: ${EMAIL_SERVER_LOGIN_NAME:-}
       EMAIL_HOST_PASSWORD: ${EMAIL_SERVER_LOGIN_PASS:-}
       EMAIL_USE_TLS: 'True'
+    healthcheck:
+      test: ['CMD-SHELL', './fetchstatus.py']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     ports:
       - '172.17.0.1:64197:8000'
     depends_on:
